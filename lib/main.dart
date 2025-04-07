@@ -134,6 +134,12 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
         _userEmail = _emailController.text;
         _initialState = false;
       });
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(),
+        ),
+      );
     } catch (e) {
       setState(() {
         _success = false;
@@ -232,6 +238,13 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
         _userEmail = _emailController.text;
         _initialState = false;
       });
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(),
+        ),
+      );
     } catch (e) {
       setState(() {
         _success = false;
