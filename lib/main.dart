@@ -32,7 +32,8 @@ class AuthService {
     await _auth.signOut();
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
     final user = _auth.currentUser;
     if (user == null) {
       return;
@@ -133,6 +134,12 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
         _userEmail = _emailController.text;
         _initialState = false;
       });
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(),
+        ),
+      );
     } catch (e) {
       setState(() {
         _success = false;
@@ -231,6 +238,13 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
         _userEmail = _emailController.text;
         _initialState = false;
       });
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfileScreen(),
+        ),
+      );
     } catch (e) {
       setState(() {
         _success = false;
@@ -326,7 +340,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _userEmail = FirebaseAuth.instance.currentUser?.email ?? 'No user logged in';
+    _userEmail =
+        FirebaseAuth.instance.currentUser?.email ?? 'No user logged in';
   }
 
   void _signOut() async {
