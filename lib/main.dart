@@ -31,6 +31,25 @@ class AuthService {
   Future<void> signOut() async {
     await _auth.signOut();
   }
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return;
+    }
+
+    try {
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      await user.updatePassword(newPassword);
+    } catch (e) {
+      print('Failed to change password: $e');
+    }
+  }
 }
 
 void main() async {
@@ -43,6 +62,8 @@ void main() async {
 }
 
 class AuthenticationScreen extends StatefulWidget {
+  const AuthenticationScreen({super.key});
+
   @override
   State<AuthenticationScreen> createState() => _AuthenticationScreenState();
 }
@@ -81,6 +102,104 @@ class _AuthenticationScreenState extends State<AuthenticationScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class RegisterEmailSection extends StatefulWidget {
+  const RegisterEmailSection({super.key, required this.auth});
+  final FirebaseAuth auth;
+
+  @override
+  State<RegisterEmailSection> createState() => _RegisterEmailSectionState();
+}
+
+class _RegisterEmailSectionState extends State<RegisterEmailSection> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _success = false;
+  bool _initialState = true;
+  String? _userEmail;
+
+  void _register() async {
+    try {
+      await widget.auth.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      setState(() {
+        _success = true;
+        _userEmail = _emailController.text;
+        _initialState = false;
+      });
+    } catch (e) {
+      setState(() {
+        _success = false;
+        _initialState = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          TextFormField(
+            controller: _emailController,
+            decoration: InputDecoration(labelText: 'Email'),
+            validator: (value) {
+              if (value?.isEmpty ?? true) {
+                return 'Please enter some text';
+              }
+              final emailRegExp =
+                  RegExp(r'^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+              if (!emailRegExp.hasMatch(value ?? '')) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
+          ),
+          TextFormField(
+            controller: _passwordController,
+            decoration: InputDecoration(labelText: 'Password'),
+            validator: (value) {
+              if (value?.isEmpty ?? true) {
+                return 'Please enter some text';
+              } else if (value!.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            alignment: Alignment.center,
+            child: ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _register();
+                }
+              },
+              child: Text('Submit'),
+            ),
+          ),
+          Container(
+            alignment: Alignment.center,
+            child: Text(
+              _initialState
+                  ? 'Please Register'
+                  : _success
+                      ? 'Successfully registered $_userEmail'
+                      : 'Registration failed',
+              style: TextStyle(color: _success ? Colors.green : Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -139,6 +258,11 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
               if (value?.isEmpty ?? true) {
                 return 'Please enter some text';
               }
+              final emailRegExp =
+                  RegExp(r'^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+              if (!emailRegExp.hasMatch(value ?? '')) {
+                return 'Please enter a valid email address';
+              }
               return null;
             },
           ),
@@ -148,6 +272,8 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
             validator: (value) {
               if (value?.isEmpty ?? true) {
                 return 'Please enter some text';
+              } else if (value!.length < 6) {
+                return 'Password must be at least 6 characters';
               }
               return null;
             },
@@ -182,93 +308,152 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
   }
 }
 
-class RegisterEmailSection extends StatefulWidget {
-  const RegisterEmailSection({super.key, required this.auth});
-  final FirebaseAuth auth;
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
   @override
-  State<RegisterEmailSection> createState() => _RegisterEmailSectionState();
+  State<StatefulWidget> createState() => _ProfileScreenState();
 }
 
-class _RegisterEmailSectionState extends State<RegisterEmailSection> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _success = false;
-  bool _initialState = true;
-  String? _userEmail;
+class _ProfileScreenState extends State<ProfileScreen> {
+  final AuthService _authService = AuthService();
+  String _userEmail = '';
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  void _register() async {
-    try {
-      await widget.auth.createUserWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-      setState(() {
-        _success = true;
-        _userEmail = _emailController.text;
-        _initialState = false;
-      });
-    } catch (e) {
-      setState(() {
-        _success = false;
-        _initialState = false;
-      });
+  @override
+  void initState() {
+    super.initState();
+    _userEmail = FirebaseAuth.instance.currentUser?.email ?? 'No user logged in';
+  }
+
+  void _signOut() async {
+    await _authService.signOut();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Signed out successfully'),
+    ));
+    Navigator.pop(context);
+  }
+
+  Future<void> _changePassword() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No user is logged in.')),
+      );
+      return;
+    }
+
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('New passwords do not match.')),
+      );
+      return;
+    }
+
+    final currentPassword = _currentPasswordController.text;
+    final newPassword = _newPasswordController.text;
+
+    _authService.changePassword(currentPassword, newPassword);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          TextFormField(
-            controller: _emailController,
-            decoration: InputDecoration(labelText: 'Email'),
-            validator: (value) {
-              if (value?.isEmpty ?? true) {
-                return 'Please enter some text';
-              }
-              return null;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Firebase Auth Demo'),
+        actions: <Widget>[
+          ElevatedButton(
+            onPressed: () {
+              _signOut();
             },
-          ),
-          TextFormField(
-            controller: _passwordController,
-            decoration: InputDecoration(labelText: 'Password'),
-            validator: (value) {
-              if (value?.isEmpty ?? true) {
-                return 'Please enter some text';
-              }
-              return null;
-            },
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            alignment: Alignment.center,
-            child: ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _register();
-                }
-              },
-              child: Text('Submit'),
-            ),
-          ),
-          Container(
-            alignment: Alignment.center,
-            child: Text(
-              _initialState
-                  ? 'Please Register'
-                  : _success
-                      ? 'Successfully registered $_userEmail'
-                      : 'Registration failed',
-              style: TextStyle(color: _success ? Colors.green : Colors.red),
-            ),
+            child: Text('Sign Out'),
           ),
         ],
       ),
+      body: Center(
+          child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            'User Email: $_userEmail',
+            style: TextStyle(fontSize: 20),
+          ),
+          SizedBox(height: 16),
+          const Text('Change Password'),
+          const Divider(),
+          Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                TextFormField(
+                  controller: _currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your current password';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a new password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters long';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your new password';
+                    }
+                    if (value != _newPasswordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _changePassword,
+                  child: Text('Change Password'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      )),
     );
   }
 }
