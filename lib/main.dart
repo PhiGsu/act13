@@ -32,7 +32,8 @@ class AuthService {
     await _auth.signOut();
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
     final user = _auth.currentUser;
     if (user == null) {
       return;
@@ -89,7 +90,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen> {
                 EmailPasswordForm(auth: FirebaseAuth.instance),
                 TextButton(
                   onPressed: toggleView,
-                  child: Text('Need an account? Register here!'),
+                  child: Text('Register'),
                 ),
               ],
             )
@@ -98,7 +99,7 @@ class _AuthenticationScreenState extends State<AuthenticationScreen> {
                 RegisterEmailSection(auth: FirebaseAuth.instance),
                 TextButton(
                   onPressed: toggleView,
-                  child: Text('Already have an account? Sign in here!'),
+                  child: Text('Sign in'),
                 ),
               ],
             ),
@@ -326,7 +327,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _userEmail = FirebaseAuth.instance.currentUser?.email ?? 'No user logged in';
+    _userEmail =
+        FirebaseAuth.instance.currentUser?.email ?? 'No user logged in';
   }
 
   void _signOut() async {
