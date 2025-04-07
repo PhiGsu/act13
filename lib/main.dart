@@ -13,6 +13,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -25,6 +27,7 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
   final String title;
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
@@ -81,6 +84,7 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
   bool _success = false;
   bool _initialState = true;
   String? _userEmail;
+
   void _register() async {
     try {
       await widget.auth.createUserWithEmailAndPassword(
@@ -114,6 +118,11 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
               if (value?.isEmpty ?? true) {
                 return 'Please enter some text';
               }
+              final emailRegExp =
+                  RegExp(r'^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+              if (!emailRegExp.hasMatch(value ?? '')) {
+                return 'Please enter a valid email address';
+              }
               return null;
             },
           ),
@@ -123,6 +132,8 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
             validator: (value) {
               if (value?.isEmpty ?? true) {
                 return 'Please enter some text';
+              } else if (value!.length < 6) {
+                return 'Password must be at least 6 characters';
               }
               return null;
             },
@@ -159,6 +170,7 @@ class _RegisterEmailSectionState extends State<RegisterEmailSection> {
 class EmailPasswordForm extends StatefulWidget {
   const EmailPasswordForm({super.key, required this.auth});
   final FirebaseAuth auth;
+
   @override
   State<EmailPasswordForm> createState() => _EmailPasswordFormState();
 }
@@ -209,6 +221,11 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
               if (value?.isEmpty ?? true) {
                 return 'Please enter some text';
               }
+              final emailRegExp =
+                  RegExp(r'^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+              if (!emailRegExp.hasMatch(value ?? '')) {
+                return 'Please enter a valid email address';
+              }
               return null;
             },
           ),
@@ -218,6 +235,8 @@ class _EmailPasswordFormState extends State<EmailPasswordForm> {
             validator: (value) {
               if (value?.isEmpty ?? true) {
                 return 'Please enter some text';
+              } else if (value!.length < 6) {
+                return 'Password must be at least 6 characters';
               }
               return null;
             },
